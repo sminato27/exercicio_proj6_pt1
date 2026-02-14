@@ -15,7 +15,9 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
     <S.Container>
       <S.Image src={item.image} alt={item.title} />
       <S.Info>
-        <h3>{item.title}</h3>
+        <h3>
+          {item.title} {item.quantity > 1 && <span>x{item.quantity}</span>}
+        </h3>
         <span>
           {new Intl.NumberFormat('pt-BR', {
             style: 'currency',

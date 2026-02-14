@@ -24,6 +24,15 @@ export const Info = styled.div`
     font-weight: 900;
     font-size: 18px;
     color: ${props => props.theme.colors.brand};
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    span {
+      font-size: 14px;
+      font-weight: 400;
+      opacity: 0.8;
+    }
   }
 
   span {

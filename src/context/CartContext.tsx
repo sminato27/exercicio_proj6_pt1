@@ -46,11 +46,26 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         items: [...state.items, { ...action.payload, quantity: 1 }]
       }
     }
-    case 'REMOVE_ITEM':
+    case 'REMOVE_ITEM': {
+      const existingItem = state.items.find(item => item.id === action.payload)
+      if (!existingItem) return state
+
+      if (existingItem.quantity > 1) {
+        return {
+          ...state,
+          items: state.items.map(item =>
+            item.id === action.payload
+              ? { ...item, quantity: item.quantity - 1 }
+              : item
+          )
+        }
+      }
+
       return {
         ...state,
         items: state.items.filter(item => item.id !== action.payload)
       }
+    }
     case 'CLEAR':
       return {
         ...state,
