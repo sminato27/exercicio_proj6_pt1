@@ -10,7 +10,7 @@ export const Card = styled.div`
 
 export const ImageWrapper = styled.div`
   position: relative;
-  height: 250px;
+  height: 217px;
   overflow: hidden;
 
   img {

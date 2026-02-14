@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import PageContainer from '../../components/layout/PageContainer'
 import ProductCard from '../../components/restaurant/ProductCard'
@@ -7,16 +7,42 @@ import Drawer from '../../components/ui/Drawer'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import CartItem from '../../components/checkout/CartItem'
-import { restaurants } from '../../data/restaurants'
-import { products, Product } from '../../data/products'
+import type { ApiRestaurant } from '../../services/efoodApi'
+import { fetchRestaurants } from '../../services/efoodApi'
+import { Product } from '../../data/products'
+import { dishToProduct } from '../../mappers/efoodMappers'
 import { useCart } from '../../hooks/useCart'
 import * as S from './styles'
 
 const Restaurant: React.FC = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const restaurant = restaurants.find(r => r.id === Number(id))
-  const restaurantProducts = products.filter(p => p.restaurantId === Number(id))
+
+  const [restaurant, setRestaurant] = useState<ApiRestaurant | null>(null)
+  const [restaurantProducts, setRestaurantProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        setLoading(true)
+        const data = await fetchRestaurants()
+        const found = data.find(r => r.id === Number(id)) ?? null
+        setRestaurant(found)
+
+        if (found) {
+          setRestaurantProducts(found.cardapio.map(d => dishToProduct(d, found.id)))
+        } else {
+          setRestaurantProducts([])
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Erro desconhecido')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [id])
 
   const {
     items,
@@ -45,6 +71,27 @@ const Restaurant: React.FC = () => {
     month: '',
     year: ''
   })
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <h2>Carregando...</h2>
+        </div>
+      </PageContainer>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <h2>Erro: {error}</h2>
+          <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+        </div>
+      </PageContainer>
+    )
+  }
 
   if (!restaurant) {
     return (
@@ -235,10 +282,10 @@ const Restaurant: React.FC = () => {
 
   return (
     <PageContainer>
-      <S.Hero image={restaurant.heroImage}>
+      <S.Hero image={restaurant.capa}>
         <S.HeroContent>
-          <span>{restaurant.category}</span>
-          <h2>{restaurant.title}</h2>
+          <span>{restaurant.tipo}</span>
+          <h2>{restaurant.titulo}</h2>
         </S.HeroContent>
       </S.Hero>
 

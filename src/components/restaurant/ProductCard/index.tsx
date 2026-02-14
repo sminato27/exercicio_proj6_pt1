@@ -1,6 +1,5 @@
 import React from 'react'
 import { Product } from '../../../data/products'
-import { useCart } from '../../../hooks/useCart'
 import Button from '../../ui/Button'
 import * as S from './styles'
 
@@ -10,24 +9,18 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenModal }) => {
-  const { addItem } = useCart()
-
   return (
-    <S.Card onClick={() => onOpenModal(product)} style={{ cursor: 'pointer' }}>
+    <S.Card style={{ cursor: 'default' }}>
       <S.Image src={product.image} alt={product.title} />
       <S.Title>{product.title}</S.Title>
-      <S.Description>
-        {product.descriptionShort}
-      </S.Description>
+      <S.Description>{product.descriptionShort}</S.Description>
+
       <Button
         variant="secondary"
         fullWidth
-        onClick={(e) => {
-          e.stopPropagation()
-          addItem(product)
-        }}
+        onClick={() => onOpenModal(product)}
       >
-        Adicionar ao carrinho
+        Comprar
       </Button>
     </S.Card>
   )
