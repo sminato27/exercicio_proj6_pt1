@@ -7,8 +7,8 @@ import Drawer from '../../components/ui/Drawer'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import CartItem from '../../components/checkout/CartItem'
-import type { ApiRestaurant } from '../../services/efoodApi'
-import { fetchRestaurants } from '../../services/efoodApi'
+import type { ApiRestaurant, CheckoutPayload, CheckoutResponse } from '../../services/efoodApi'
+import { fetchRestaurants, postCheckout } from '../../services/efoodApi'
 import { Product } from '../../data/products'
 import { dishToProduct } from '../../mappers/efoodMappers'
 import { useCart } from '../../hooks/useCart'
@@ -71,6 +71,8 @@ const Restaurant: React.FC = () => {
     month: '',
     year: ''
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
 
   if (loading) {
     return (
@@ -108,6 +110,60 @@ const Restaurant: React.FC = () => {
     if (selectedProduct) {
       addItem(selectedProduct)
       setSelectedProduct(null)
+    }
+  }
+
+  const handleCheckout = async () => {
+    const currentYear = new Date().getFullYear()
+    if (
+      paymentData.cardNumber.length === 16 &&
+      paymentData.cvv.length === 3 &&
+      Number(paymentData.month) >= 1 &&
+      Number(paymentData.month) <= 12 &&
+      Number(paymentData.year) >= currentYear
+    ) {
+      const payload: CheckoutPayload = {
+        products: items.flatMap(item =>
+          Array.from({ length: item.quantity }, () => ({
+            id: item.id,
+            price: item.price
+          }))
+        ),
+        delivery: {
+          receiver: addressData.receiver,
+          address: {
+            description: addressData.address,
+            city: addressData.city,
+            zipCode: addressData.zip,
+            number: Number(addressData.number),
+            complement: addressData.complement || ''
+          }
+        },
+        payment: {
+          card: {
+            name: paymentData.cardName,
+            number: paymentData.cardNumber,
+            code: Number(paymentData.cvv),
+            expires: {
+              month: Number(paymentData.month),
+              year: Number(paymentData.year)
+            }
+          }
+        }
+      }
+
+      try {
+        setIsSubmitting(true)
+        const result = await postCheckout(payload)
+        setCheckoutResult(result)
+        setStep('confirmation')
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Erro ao processar pagamento')
+      } finally {
+        setIsSubmitting(false)
+      }
+    } else {
+      alert('Dados do cartão inválidos')
     }
   }
 
@@ -236,23 +292,18 @@ const Restaurant: React.FC = () => {
             variant="secondary"
             fullWidth
             type="button"
-            onClick={() => {
-              const currentYear = new Date().getFullYear()
-              if (
-                paymentData.cardNumber.length === 16 &&
-                paymentData.cvv.length === 3 &&
-                Number(paymentData.month) >= 1 && Number(paymentData.month) <= 12 &&
-                Number(paymentData.year) >= currentYear
-              ) {
-                setStep('confirmation')
-              } else {
-                alert('Dados do cartão inválidos')
-              }
-            }}
+            disabled={isSubmitting}
+            onClick={handleCheckout}
           >
-            Finalizar pagamento
+            {isSubmitting ? 'Enviando pedido...' : 'Finalizar pagamento'}
           </Button>
-          <Button variant="secondary" fullWidth type="button" onClick={() => setStep('address')}>
+          <Button
+            variant="secondary"
+            fullWidth
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => setStep('address')}
+          >
             Voltar para a edição de endereço
           </Button>
         </div>
@@ -262,7 +313,7 @@ const Restaurant: React.FC = () => {
 
   const renderConfirmation = () => (
     <S.OrderConfirmation>
-      <h2>Pedido realizado - ORDER_{Math.floor(Math.random() * 1000000)}</h2>
+      <h2>{checkoutResult ? `Pedido realizado - ORDER_${checkoutResult.orderId}` : 'Pedido realizado'}</h2>
       <p>Estamos felizes em informar que seu pedido já está em processo de preparação e, em breve, será entregue no endereço fornecido.</p>
       <p>Gostaríamos de ressaltar que nossos entregadores não estão autorizados a realizar cobranças extras.</p>
       <p>Lembre-se da importância de higienizar as mãos após o recebimento do pedido, garantindo assim sua segurança e bem-estar durante a refeição.</p>
@@ -273,6 +324,7 @@ const Restaurant: React.FC = () => {
         onClick={() => {
           clearCart()
           closeCart()
+          setCheckoutResult(null)
         }}
       >
         Concluir
